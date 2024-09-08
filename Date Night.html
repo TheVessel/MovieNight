@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Date Night</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            overflow: hidden; /* Prevents scrolling on the body */
+            color: white;
+            position: relative;
+            background-color: black; /* Fallback background color */
+        }
+
+        /* Video background styling */
+        #background-video {
+            position: absolute;
+            right: 0;
+            bottom: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            z-index: -1;
+        }
+
+        h1 {
+            position: fixed;
+            top: 50px;
+            width: 100%;
+            text-align: center;
+            color: #fff;
+            font-size: 2em;
+            z-index: 10;
+            transition: opacity 0.5s ease-in-out;
+        }
+
+        #container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            width: 100%;
+            height: 100%;
+            overflow-y: auto; /* Allows scrolling */
+            padding: 20px;
+            box-sizing: border-box;
+        }
+
+        #movie-list {
+            display: none; /* Hidden by default */
+            text-align: center;
+            max-width: 600px;
+            width: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            border: 5px solid #ccc;
+            padding: 10px; /* Reduced padding */
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.5);
+            margin-top: 20px; /* Reduced margin-top */
+        }
+
+        .movie-item img {
+            max-width: 168px; /* Reduced size by 30% */
+            height: auto;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+            background: #eee;
+            padding: 10px; /* Reduced padding */
+            border: 5px solid #ccc; /* Reduced border width */
+        }
+
+        .movie-item p {
+            margin: 10px 0;
+            color: #fff;
+        }
+
+        button {
+            background-color: #dc3545; /* Dark red color */
+            border: none;
+            color: white;
+            padding: 12px 24px;
+            text-align: center;
+            text-decoration: none;
+            display: inline-block;
+            font-size: 16px;
+            margin: 4px 2px;
+            cursor: pointer;
+            border-radius: 4px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+        }
+
+        button:hover {
+            background-color: #c82333; /* Darker red on hover */
+        }
+
+        #genre-select {
+            margin-bottom: 10px; /* Reduced margin-bottom */
+        }
+
+        .button-container {
+            margin-top: 10px;
+        }
+
+        .button-container button {
+            margin: 5px;
+        }
+    </style>
+</head>
+<body>
+    <!-- Video Background -->
+    <video id="background-video" autoplay loop muted>
+        <source src="theater.mp4" type="video/mp4">
+        Your browser does not support the video tag.
+    </video>
+
+    <h1 id="title">Date Night</h1>
+    <div id="container">
+        <div id="pre-movie">
+            <select id="genre-select">
+                <option value="">Select Genre</option>
+            </select>
+            <button id="suggest-button">Suggest Movie</button>
+        </div>
+        <div id="movie-list"></div>
+    </div>
+
+    <audio id="swoosh-sound" src="Swoosh.mp3"></audio>
+
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script>
+        const API_KEY = 'c3fd81ffd17a72709195d6fbb779b268'; // Your TMDb API key
+        const GENRES_URL = `https://api.themoviedb.org/3/genre/movie/list?api_key=${API_KEY}`;
+
+        $(document).ready(function() {
+            let currentMovie = null;
+
+            $.getJSON(GENRES_URL)
+                .done(function(data) {
+                    const genres = data.genres;
+                    const genreSelect = $('#genre-select');
+                    genres.forEach(genre => {
+                        genreSelect.append(`<option value="${genre.id}">${genre.name}</option>`);
+                    });
+                })
+                .fail(function(jqXHR, textStatus, errorThrown) {
+                    console.error('Error fetching genres:', textStatus, errorThrown);
+                    alert('Failed to fetch genre data. Please check the console for more details.');
+                });
+
+            $('#suggest-button').on('click', function() {
+                $('#title').css('opacity', '0');
+
+                const selectedGenre = $('#genre-select').val();
+                const apiUrl = selectedGenre ? 
+                    `https://api.themoviedb.org/3/discover/movie?api_key=${API_KEY}&with_genres=${selectedGenre}&sort_by=popularity.desc` :
+                    `https://api.themoviedb.org/3/discover/movie?api_key=${API_KEY}&sort_by=popularity.desc`;
+
+                $.getJSON(apiUrl)
+                    .done(function(data) {
+                        if (data.results.length > 0) {
+                            const topMovies = data.results.slice(0, 50);
+                            const randomIndex = Math.floor(Math.random() * topMovies.length);
+                            const movie = topMovies[randomIndex]; 
+                            const movieId = movie.id;
+                            const posterUrl = `https://image.tmdb.org/t/p/w500${movie.poster_path}`;
+                            const overview = movie.overview;
+
+                            $.getJSON(`https://api.themoviedb.org/3/movie/${movieId}/videos?api_key=${API_KEY}`, function(videoData) {
+                                const trailer = videoData.results.find(v => v.type === 'Trailer' && v.site === 'YouTube');
+                                const trailerUrl = trailer ? `https://www.youtube.com/watch?v=${trailer.key}` : '';
+
+                                $('#pre-movie').hide(); // Hide the pre-movie elements
+                                $('#movie-list').show(); // Show the movie list
+
+                                $('#movie-list').empty();
+                                $('#movie-list').append(`
+                                    <div class="movie-item">
+                                        <img src="${posterUrl}" alt="Movie Poster">
+                                        <p>${overview || 'No synopsis available.'}</p>
+                                        <div class="button-container">
+                                            <button class="trailer-button" data-url="${trailerUrl}">Watch Trailer</button>
+                                            <button id="suggest-another">Suggest Another</button>
+                                        </div>
+                                    </div>
+                                `);
+
+                                $('#swoosh-sound')[0].play();
+
+                                currentMovie = movie;
+                            });
+                        } else {
+                            alert('No movies found.');
+                        }
+                    })
+                    .fail(function(jqXHR, textStatus, errorThrown) {
+                        console.error('Error fetching data:', textStatus, errorThrown);
+                        alert('Failed to fetch movie data. Please check the console for more details.');
+                    });
+            });
+
+            $('#movie-list').on('click', '.trailer-button', function() {
+                const trailerUrl = $(this).attr('data-url');
+                if (trailerUrl) {
+                    window.open(trailerUrl, '_blank');
+                } else {
+                    alert('No trailer available.');
+                }
+            });
+
+            $('#movie-list').on('click', '#suggest-another', function() {
+                $('#suggest-button').click();
+            });
+        });
+    </script>
+</body>
+</html>
