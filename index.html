@@ -14,11 +14,13 @@
             align-items: center;
             justify-content: center;
             height: 100vh;
-            overflow: hidden;
+            overflow: auto; /* Allow scrolling */
             color: white;
-            background-color: black;
+            position: relative;
+            background-color: black; /* Fallback background color */
         }
 
+        /* Video background styling */
         #background-video {
             position: absolute;
             right: 0;
@@ -35,31 +37,34 @@
             align-items: center;
             width: 100%;
             height: 100%;
-            overflow-y: auto;
             padding: 20px;
             box-sizing: border-box;
         }
 
         #movie-list {
-            display: none;
+            display: none; /* Hidden by default */
             text-align: center;
-            max-width: 600px;
+            max-width: 800px; /* Adjusted width */
             width: 100%;
             background: rgba(0, 0, 0, 0.7);
             border: 5px solid #ccc;
             padding: 10px;
             border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.5);
             margin-top: 20px;
+            overflow-y: auto; /* Allow scrolling for the movie list */
+        }
+
+        .movie-item {
+            margin-bottom: 20px;
         }
 
         .movie-item img {
-            max-width: 150px;
+            max-width: 140px; /* Adjusted size */
             height: auto;
             border-radius: 8px;
             box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
             background: #eee;
-            padding: 10px;
-            border: 5px solid #ccc;
         }
 
         .movie-item p {
@@ -68,11 +73,12 @@
         }
 
         button {
-            background-color: #dc3545;
+            background-color: #dc3545; /* Dark red color */
             border: none;
             color: white;
             padding: 12px 24px;
             text-align: center;
+            text-decoration: none;
             display: inline-block;
             font-size: 16px;
             margin: 4px 2px;
@@ -82,10 +88,10 @@
         }
 
         button:hover {
-            background-color: #c82333;
+            background-color: #c82333; /* Darker red on hover */
         }
 
-        #genre-select {
+        #genre-select, #decade-select {
             margin-bottom: 10px;
         }
 
@@ -97,17 +103,32 @@
             margin: 5px;
         }
 
-        .button-container .change-genre {
-            background-color: #007bff;
+        #freestyle-toggle {
+            display: none; /* Hide by default */
         }
 
-        .button-container .change-genre:hover {
-            background-color: #0056b3;
+        .freestyle .movie-item {
+            display: inline-block;
+            width: auto;
+            margin: 10px;
+        }
+
+        .freestyle .movie-item img {
+            cursor: pointer;
+        }
+
+        .freestyle .movie-item .details {
+            display: none; /* Hide details by default */
+            text-align: left;
+        }
+
+        .freestyle .movie-item.show-details .details {
+            display: block;
         }
     </style>
 </head>
 <body>
-
+    <!-- Video Background -->
     <video id="background-video" autoplay loop muted>
         <source src="theater.mp4" type="video/mp4">
         Your browser does not support the video tag.
@@ -115,107 +136,127 @@
 
     <div id="container">
         <div id="pre-movie">
-            <select id="dvd-or-theater">
-                <option value="">ON DVD or In Theaters</option>
-                <option value="dvd">On DVD</option>
-                <option value="theater">In Theaters</option>
-            </select>
-
             <select id="genre-select">
                 <option value="">Select Genre</option>
+                <!-- Populate genres dynamically -->
             </select>
-
+            <select id="decade-select">
+                <option value="">Select Decade</option>
+                <option value="1980-1990">1980-1990</option>
+                <option value="1990-2000">1990-2000</option>
+                <option value="2000-2024">2000-2024</option>
+            </select>
             <button id="suggest-button">Suggest Movie</button>
+            <button id="freestyle-toggle">Enable Freestyle</button>
         </div>
-
-        <div id="movie-list"></div>
+        <div id="movie-list">
+            <button id="back-button">Back to Selection</button>
+        </div>
     </div>
 
     <audio id="swoosh-sound" src="Swoosh.mp3"></audio>
 
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script>
-        const API_KEY = 'c3fd81ffd17a72709195d6fbb779b268';
+        const API_KEY = 'c3fd81ffd17a72709195d6fbb779b268'; // Your TMDb API key
         const GENRES_URL = `https://api.themoviedb.org/3/genre/movie/list?api_key=${API_KEY}`;
 
-        $(document).ready(function () {
+        $(document).ready(function() {
+            let isFreestyle = false;
+
+            // Fetch genres
             $.getJSON(GENRES_URL)
-                .done(function (data) {
+                .done(function(data) {
                     const genres = data.genres;
                     const genreSelect = $('#genre-select');
                     genres.forEach(genre => {
                         genreSelect.append(`<option value="${genre.id}">${genre.name}</option>`);
                     });
                 })
-                .fail(function (jqXHR, textStatus, errorThrown) {
-                    alert('Failed to fetch genre data.');
+                .fail(function(jqXHR, textStatus, errorThrown) {
+                    console.error('Error fetching genres:', textStatus, errorThrown);
+                    alert('Failed to fetch genre data. Please check the console for more details.');
                 });
 
-            $('#suggest-button').on('click', function () {
-                const selectedOption = $('#dvd-or-theater').val();
+            $('#suggest-button').on('click', function() {
                 const selectedGenre = $('#genre-select').val();
-                if (!selectedOption) {
-                    alert('Please select DVD or Theater option.');
-                    return;
+                const selectedDecade = $('#decade-select').val();
+                let apiUrl = `https://api.themoviedb.org/3/discover/movie?api_key=${API_KEY}&sort_by=popularity.desc`;
+
+                if (selectedGenre) {
+                    apiUrl += `&with_genres=${selectedGenre}`;
                 }
 
-                const apiUrl = selectedGenre
-                    ? `https://api.themoviedb.org/3/discover/movie?api_key=${API_KEY}&with_genres=${selectedGenre}&sort_by=popularity.desc&with_release_type=${selectedOption === 'dvd' ? '4|5' : '3'}`
-                    : `https://api.themoviedb.org/3/discover/movie?api_key=${API_KEY}&sort_by=popularity.desc&with_release_type=${selectedOption === 'dvd' ? '4|5' : '3'}`;
+                if (selectedDecade) {
+                    const [startYear, endYear] = selectedDecade.split('-');
+                    apiUrl += `&primary_release_date.gte=${startYear}-01-01&primary_release_date.lte=${endYear}-12-31`;
+                }
 
                 $.getJSON(apiUrl)
-                    .done(function (data) {
+                    .done(function(data) {
                         if (data.results.length > 0) {
-                            const randomIndex = Math.floor(Math.random() * data.results.length);
-                            const movie = data.results[randomIndex];
-                            const movieId = movie.id;
-                            const posterUrl = `https://image.tmdb.org/t/p/w500${movie.poster_path}`;
-                            const overview = movie.overview;
+                            const topMovies = data.results.slice(0, 50);
+                            $('#pre-movie').hide(); // Hide the pre-movie elements
+                            $('#movie-list').show(); // Show the movie list
 
-                            $.getJSON(`https://api.themoviedb.org/3/movie/${movieId}/videos?api_key=${API_KEY}`, function (videoData) {
-                                const trailer = videoData.results.find(v => v.type === 'Trailer' && v.site === 'YouTube');
-                                const trailerUrl = trailer ? `https://www.youtube.com/watch?v=${trailer.key}` : '';
+                            $('#movie-list').empty();
+                            $('#movie-list').append('<button id="back-button">Back to Selection</button>');
+                            topMovies.forEach(movie => {
+                                const movieId = movie.id;
+                                const posterUrl = `https://image.tmdb.org/t/p/w500${movie.poster_path}`;
+                                const overview = movie.overview;
 
-                                $('#pre-movie').hide();
-                                $('#movie-list').show().html(`
+                                $('#movie-list').append(`
                                     <div class="movie-item">
                                         <img src="${posterUrl}" alt="Movie Poster">
-                                        <p>${overview}</p>
-                                        <div class="button-container">
-                                            <button class="trailer-button" data-url="${trailerUrl}">Watch Trailer</button>
-                                            <button id="suggest-another">Suggest Another</button>
-                                            <button class="change-genre">Change Genre</button>
+                                        <p>${overview || 'No synopsis available.'}</p>
+                                        <div class="details">
+                                            <button class="trailer-button" data-id="${movieId}">Watch Trailer</button>
                                         </div>
                                     </div>
                                 `);
-
-                                $('#swoosh-sound')[0].play();
                             });
+
+                            $('#swoosh-sound')[0].play();
                         } else {
                             alert('No movies found.');
                         }
                     })
-                    .fail(function () {
-                        alert('Failed to fetch movie data.');
+                    .fail(function(jqXHR, textStatus, errorThrown) {
+                        console.error('Error fetching data:', textStatus, errorThrown);
+                        alert('Failed to fetch movie data. Please check the console for more details.');
                     });
             });
 
-            $('#movie-list').on('click', '.trailer-button', function () {
-                const trailerUrl = $(this).attr('data-url');
-                if (trailerUrl) {
-                    window.open(trailerUrl, '_blank');
-                } else {
-                    alert('No trailer available.');
+            $('#movie-list').on('click', '.movie-item img', function() {
+                if (isFreestyle) {
+                    $(this).parent().toggleClass('show-details');
                 }
             });
 
-            $('#movie-list').on('click', '#suggest-another', function () {
-                $('#suggest-button').click();
+            $('#movie-list').on('click', '.trailer-button', function() {
+                const movieId = $(this).data('id');
+                $.getJSON(`https://api.themoviedb.org/3/movie/${movieId}/videos?api_key=${API_KEY}`, function(videoData) {
+                    const trailer = videoData.results.find(v => v.type === 'Trailer' && v.site === 'YouTube');
+                    const trailerUrl = trailer ? `https://www.youtube.com/watch?v=${trailer.key}` : '';
+
+                    if (trailerUrl) {
+                        window.open(trailerUrl, '_blank');
+                    } else {
+                        alert('No trailer available.');
+                    }
+                });
             });
 
-            $('#movie-list').on('click', '.change-genre', function () {
+            $('#freestyle-toggle').on('click', function() {
+                isFreestyle = !isFreestyle;
+                $('#movie-list').toggleClass('freestyle', isFreestyle);
+                $(this).text(isFreestyle ? 'Disable Freestyle' : 'Enable Freestyle');
+            });
+
+            $('#movie-list').on('click', '#back-button', function() {
                 $('#movie-list').hide();
-                $('#pre-movie').show();
+                $('#pre-movie').show(); // Show the genre and decade selection
             });
         });
     </script>
