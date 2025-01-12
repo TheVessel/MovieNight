@@ -14,13 +14,12 @@
             align-items: center;
             justify-content: center;
             height: 100vh;
-            overflow: auto; /* Allow scrolling */
+            overflow: auto;
             color: white;
             position: relative;
-            background-color: black; /* Fallback background color */
+            background-color: black;
         }
 
-        /* Video background styling */
         #background-video {
             position: absolute;
             right: 0;
@@ -42,9 +41,9 @@
         }
 
         #movie-list {
-            display: none; /* Hidden by default */
+            display: none;
             text-align: center;
-            max-width: 800px; /* Adjusted width */
+            max-width: 800px;
             width: 100%;
             background: rgba(0, 0, 0, 0.7);
             border: 5px solid #ccc;
@@ -52,7 +51,7 @@
             border-radius: 8px;
             box-shadow: 0 4px 8px rgba(0, 0, 0, 0.5);
             margin-top: 20px;
-            overflow-y: auto; /* Allow scrolling for the movie list */
+            overflow-y: auto;
         }
 
         .movie-item {
@@ -60,7 +59,7 @@
         }
 
         .movie-item img {
-            max-width: 140px; /* Adjusted size */
+            max-width: 140px;
             height: auto;
             border-radius: 8px;
             box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
@@ -73,7 +72,7 @@
         }
 
         button {
-            background-color: #dc3545; /* Dark red color */
+            background-color: #dc3545;
             border: none;
             color: white;
             padding: 12px 24px;
@@ -88,7 +87,7 @@
         }
 
         button:hover {
-            background-color: #c82333; /* Darker red on hover */
+            background-color: #c82333;
         }
 
         #genre-select, #decade-select {
@@ -104,7 +103,7 @@
         }
 
         #freestyle-toggle {
-            display: none; /* Hide by default */
+            display: none;
         }
 
         .freestyle .movie-item {
@@ -118,17 +117,27 @@
         }
 
         .freestyle .movie-item .details {
-            display: none; /* Hide details by default */
-            text-align: left;
+            display: none;
         }
 
         .freestyle .movie-item.show-details .details {
             display: block;
         }
+
+        #loading {
+            display: none;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.8);
+            padding: 20px;
+            border-radius: 10px;
+            z-index: 100;
+        }
     </style>
 </head>
 <body>
-    <!-- Video Background -->
     <video id="background-video" autoplay loop muted>
         <source src="theater.mp4" type="video/mp4">
         Your browser does not support the video tag.
@@ -138,7 +147,6 @@
         <div id="pre-movie">
             <select id="genre-select">
                 <option value="">Select Genre</option>
-                <!-- Populate genres dynamically -->
             </select>
             <select id="decade-select">
                 <option value="">Select Decade</option>
@@ -151,6 +159,9 @@
         </div>
         <div id="movie-list">
             <button id="back-button">Back to Selection</button>
+        </div>
+        <div id="loading">
+            <p>Loading...</p>
         </div>
     </div>
 
@@ -179,6 +190,7 @@
                 });
 
             $('#suggest-button').on('click', function() {
+                $('#loading').show();
                 const selectedGenre = $('#genre-select').val();
                 const selectedDecade = $('#decade-select').val();
                 let apiUrl = `https://api.themoviedb.org/3/discover/movie?api_key=${API_KEY}&sort_by=popularity.desc`;
@@ -192,30 +204,29 @@
                     apiUrl += `&primary_release_date.gte=${startYear}-01-01&primary_release_date.lte=${endYear}-12-31`;
                 }
 
+                apiUrl += '&page=' + Math.floor(Math.random() * 500) + 1; // Random page to ensure variety
+
                 $.getJSON(apiUrl)
                     .done(function(data) {
                         if (data.results.length > 0) {
-                            const topMovies = data.results.slice(0, 50);
-                            $('#pre-movie').hide(); // Hide the pre-movie elements
-                            $('#movie-list').show(); // Show the movie list
+                            const randomMovie = data.results[Math.floor(Math.random() * data.results.length)];
+                            const movieId = randomMovie.id;
+                            const posterUrl = `https://image.tmdb.org/t/p/w500${randomMovie.poster_path}`;
+                            const overview = randomMovie.overview;
 
+                            $('#pre-movie').hide();
+                            $('#movie-list').show();
                             $('#movie-list').empty();
-                            $('#movie-list').append('<button id="back-button">Back to Selection</button>');
-                            topMovies.forEach(movie => {
-                                const movieId = movie.id;
-                                const posterUrl = `https://image.tmdb.org/t/p/w500${movie.poster_path}`;
-                                const overview = movie.overview;
-
-                                $('#movie-list').append(`
-                                    <div class="movie-item">
-                                        <img src="${posterUrl}" alt="Movie Poster">
-                                        <p>${overview || 'No synopsis available.'}</p>
-                                        <div class="details">
-                                            <button class="trailer-button" data-id="${movieId}">Watch Trailer</button>
-                                        </div>
+                            $('#movie-list').append(`
+                                <button id="back-button">Back to Selection</button>
+                                <div class="movie-item">
+                                    <img src="${posterUrl}" alt="${randomMovie.title} Poster">
+                                    <p>${overview || 'No synopsis available.'}</p>
+                                    <div class="details">
+                                        <button class="trailer-button" data-id="${movieId}">Watch Trailer</button>
                                     </div>
-                                `);
-                            });
+                                </div>
+                            `);
 
                             $('#swoosh-sound')[0].play();
                         } else {
@@ -225,6 +236,9 @@
                     .fail(function(jqXHR, textStatus, errorThrown) {
                         console.error('Error fetching data:', textStatus, errorThrown);
                         alert('Failed to fetch movie data. Please check the console for more details.');
+                    })
+                    .always(function() {
+                        $('#loading').hide();
                     });
             });
 
@@ -256,7 +270,7 @@
 
             $('#movie-list').on('click', '#back-button', function() {
                 $('#movie-list').hide();
-                $('#pre-movie').show(); // Show the genre and decade selection
+                $('#pre-movie').show();
             });
         });
     </script>
