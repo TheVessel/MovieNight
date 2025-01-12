@@ -4,167 +4,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Movie Suggestion</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            margin: 0;
-            padding: 0;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            height: 100vh;
-            overflow: auto;
-            color: white;
-            position: relative;
-            background-color: black;
-        }
-
-        #background-video {
-            position: absolute;
-            right: 0;
-            bottom: 0;
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-            z-index: -1;
-        }
-
-        #container {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            width: 100%;
-            height: 100%;
-            padding: 20px;
-            box-sizing: border-box;
-        }
-
-        #movie-list {
-            display: none;
-            text-align: center;
-            max-width: 800px;
-            width: 100%;
-            background: rgba(0, 0, 0, 0.7);
-            border: 5px solid #ccc;
-            padding: 10px;
-            border-radius: 8px;
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.5);
-            margin-top: 20px;
-            overflow-y: auto;
-        }
-
-        .movie-item {
-            margin-bottom: 20px;
-        }
-
-        .movie-item img {
-            max-width: 140px;
-            height: auto;
-            border-radius: 8px;
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
-            background: #eee;
-        }
-
-        .movie-item p {
-            margin: 10px 0;
-            color: #fff;
-        }
-
-        button {
-            background-color: #dc3545;
-            border: none;
-            color: white;
-            padding: 12px 24px;
-            text-align: center;
-            text-decoration: none;
-            display: inline-block;
-            font-size: 16px;
-            margin: 4px 2px;
-            cursor: pointer;
-            border-radius: 4px;
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
-        }
-
-        button:hover {
-            background-color: #c82333;
-        }
-
-        #genre-select, #decade-select {
-            margin-bottom: 10px;
-        }
-
-        .button-container {
-            margin-top: 10px;
-        }
-
-        .button-container button {
-            margin: 5px;
-        }
-
-        #freestyle-toggle {
-            display: none;
-        }
-
-        .freestyle .movie-item {
-            display: inline-block;
-            width: auto;
-            margin: 10px;
-        }
-
-        .freestyle .movie-item img {
-            cursor: pointer;
-        }
-
-        .freestyle .movie-item .details {
-            display: none;
-        }
-
-        .freestyle .movie-item.show-details .details {
-            display: block;
-        }
-
-        #loading {
-            display: none;
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            background: rgba(0, 0, 0, 0.8);
-            padding: 20px;
-            border-radius: 10px;
-            z-index: 100;
-        }
-    </style>
+    <!-- ... Your existing CSS here ... -->
 </head>
 <body>
-    <video id="background-video" autoplay loop muted>
-        <source src="theater.mp4" type="video/mp4">
-        Your browser does not support the video tag.
-    </video>
-
-    <div id="container">
-        <div id="pre-movie">
-            <select id="genre-select">
-                <option value="">Select Genre</option>
-            </select>
-            <select id="decade-select">
-                <option value="">Select Decade</option>
-                <option value="1980-1990">1980-1990</option>
-                <option value="1990-2000">1990-2000</option>
-                <option value="2000-2024">2000-2024</option>
-            </select>
-            <button id="suggest-button">Suggest Movie</button>
-            <button id="freestyle-toggle">Enable Freestyle</button>
-        </div>
-        <div id="movie-list">
-            <button id="back-button">Back to Selection</button>
-        </div>
-        <div id="loading">
-            <p>Loading...</p>
-        </div>
-    </div>
-
+    <!-- ... Your existing HTML here ... -->
     <audio id="swoosh-sound" src="Swoosh.mp3"></audio>
 
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
@@ -193,6 +36,7 @@
                 $('#loading').show();
                 const selectedGenre = $('#genre-select').val();
                 const selectedDecade = $('#decade-select').val();
+                
                 let apiUrl = `https://api.themoviedb.org/3/discover/movie?api_key=${API_KEY}&sort_by=popularity.desc`;
 
                 if (selectedGenre) {
@@ -204,11 +48,13 @@
                     apiUrl += `&primary_release_date.gte=${startYear}-01-01&primary_release_date.lte=${endYear}-12-31`;
                 }
 
-                apiUrl += '&page=' + Math.floor(Math.random() * 500) + 1; // Random page to ensure variety
+                // Always use page 1 for consistency, but include randomness in the seed parameter if needed
+                apiUrl += '&page=1';
 
                 $.getJSON(apiUrl)
                     .done(function(data) {
                         if (data.results.length > 0) {
+                            // Now we select a random movie from the first page
                             const randomMovie = data.results[Math.floor(Math.random() * data.results.length)];
                             const movieId = randomMovie.id;
                             const posterUrl = `https://image.tmdb.org/t/p/w500${randomMovie.poster_path}`;
@@ -230,7 +76,7 @@
 
                             $('#swoosh-sound')[0].play();
                         } else {
-                            alert('No movies found.');
+                            alert('No movies found for the selected criteria.');
                         }
                     })
                     .fail(function(jqXHR, textStatus, errorThrown) {
