@@ -26,7 +26,7 @@
             bottom: 0;
             width: 100%;
             height: 100%;
-            object-fit: cover;
+            object-fit: contain; /* Changed from 'cover' to 'contain' for a non-zoomed view */
             z-index: -1;
         }
 
@@ -142,7 +142,7 @@
                 <option value="1990-2000">1990-2000</option>
                 <option value="2000-2010">2000-2010</option>
                 <option value="2010-2020">2010-2020</option>
-                <option value="2020-2025">2020-Current</option> <!-- Here, 2025 is used as an example of "current" -->
+                <option value="2020-2025">2020-Current</option>
             </select>
             <button id="suggest-button">Suggest Movie</button>
             <button id="freestyle-toggle">Enable Freestyle</button>
